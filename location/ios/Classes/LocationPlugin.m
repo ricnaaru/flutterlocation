@@ -96,22 +96,28 @@
         self.locationWanted = YES;
 
         if ([self isPermissionGranted]) {
+            if (@available(iOS 9.0, *)) {
+                self.clLocationManager.allowsBackgroundLocationUpdates = YES;
+            }
             [self.clLocationManager startUpdatingLocation];
         } else {
             [self requestPermission];
             if ([self isPermissionGranted]) {
+                if (@available(iOS 9.0, *)) {
+                    self.clLocationManager.allowsBackgroundLocationUpdates = YES;
+                }
                 [self.clLocationManager startUpdatingLocation];
             }
         }
     } else if ([call.method isEqualToString:@"hasPermission"]) {
         if ([self isPermissionGranted]) {
-            result([self isHighAccuracyPermitted] ? @1 : @3);
+            result(@1);
         } else {
             result(@0);
         }
     } else if ([call.method isEqualToString:@"requestPermission"]) {
         if ([self isPermissionGranted]) {
-            result([self isHighAccuracyPermitted] ? @1 : @3);
+            result(@1);
         } else if ([CLLocationManager authorizationStatus] == kCLAuthorizationStatusNotDetermined) {
             self.flutterResult = result;
             self.permissionWanted = YES;
@@ -140,6 +146,8 @@
                 if (returnCode == NSAlertFirstButtonReturn) {
                     NSString *urlString = @"x-apple.systempreferences:com.apple.preference.security?Privacy_LocationServices";
                     [[NSWorkspace sharedWorkspace] openURL:[NSURL URLWithString:urlString]];
+                } else {
+                    NSLog(@"Cancel");
                 }
             }];
 #else
@@ -181,22 +189,10 @@
     }
 }
 
--(BOOL) isHighAccuracyPermitted {
-#if __IPHONE_14_0
-    if (@available(iOS 14.0, *)) {
-      CLAccuracyAuthorization accuracy = [self.clLocationManager accuracyAuthorization];
-      if (accuracy == CLAccuracyAuthorizationReducedAccuracy) {
-        return NO;
-      }
-    }
-#endif
-    return YES;
-}
-
 -(BOOL) isPermissionGranted {
     BOOL isPermissionGranted = NO;
     CLAuthorizationStatus status = [CLLocationManager authorizationStatus];
-    
+
 #if TARGET_OS_OSX
     if (status == kCLAuthorizationStatusAuthorized) {
         // Location services are available
@@ -225,7 +221,7 @@
     } else {
         isPermissionGranted = NO;
     }
-    
+
     return isPermissionGranted;
 }
 
@@ -234,6 +230,9 @@
     self.flutterListening = YES;
 
     if ([self isPermissionGranted]) {
+        if (@available(iOS 9.0, *)) {
+            self.clLocationManager.allowsBackgroundLocationUpdates = YES;
+        }
         [self.clLocationManager startUpdatingLocation];
     } else {
         [self requestPermission];
@@ -280,6 +279,8 @@
 - (void)locationManager:(CLLocationManager *)manager
     didChangeAuthorizationStatus:(CLAuthorizationStatus)status {
     if (status == kCLAuthorizationStatusDenied) {
+        // The user denied authorization
+        NSLog(@"User denied permissions");
         if (self.permissionWanted) {
             self.permissionWanted = NO;
             self.flutterResult(@0);
@@ -287,22 +288,30 @@
     }
 #if TARGET_OS_OSX
     else if (status == kCLAuthorizationStatusAuthorized) {
+        NSLog(@"User granted permissions");
         if (self.permissionWanted) {
             self.permissionWanted = NO;
             self.flutterResult(@1);
         }
 
         if (self.locationWanted || self.flutterListening) {
+            if (@available(iOS 9.0, *)) {
+                self.clLocationManager.allowsBackgroundLocationUpdates = YES;
+            }
             [self.clLocationManager startUpdatingLocation];
         }
     } else if (@available(macOS 10.12, *)) {
         if (status == kCLAuthorizationStatusAuthorizedAlways) {
+            NSLog(@"User granted permissions");
             if (self.permissionWanted) {
                 self.permissionWanted = NO;
                 self.flutterResult(@1);
             }
 
             if (self.locationWanted || self.flutterListening) {
+                if (@available(iOS 9.0, *)) {
+                    self.clLocationManager.allowsBackgroundLocationUpdates = YES;
+                }
                 [self.clLocationManager startUpdatingLocation];
             }
         }
@@ -310,12 +319,16 @@
 #else //if TARGET_OS_IOS
     else if (status == kCLAuthorizationStatusAuthorizedWhenInUse ||
         status == kCLAuthorizationStatusAuthorizedAlways) {
+        NSLog(@"User granted permissions");
         if (self.permissionWanted) {
             self.permissionWanted = NO;
-            self.flutterResult([self isHighAccuracyPermitted] ? @1 : @3);
+            self.flutterResult(@1);
         }
 
         if (self.locationWanted || self.flutterListening) {
+            if (@available(iOS 9.0, *)) {
+                self.clLocationManager.allowsBackgroundLocationUpdates = YES;
+            }
             [self.clLocationManager startUpdatingLocation];
         }
     }
